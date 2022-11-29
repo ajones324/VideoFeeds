@@ -9,21 +9,25 @@ import XCTest
 @testable import VideoFeeds
 
 class VideoFeedsTests: XCTestCase {
+    
+    var viewModel: FeaturedFeedViewModel!
+    var mockAPIService: MockApiService!
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    override func setUp() {
+        super.setUp()
+        mockAPIService = MockApiService()
+        viewModel = FeaturedFeedViewModel(apiService: mockAPIService)
     }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    
+    override func tearDown() {
+        viewModel = nil
+        mockAPIService = nil
+        super.tearDown()
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    
+    func test_fetch_featured_videos() {
+        viewModel.fetchVideos()
+        XCTAssert(mockAPIService!.isFetchVideoCalled)
     }
 
     func testPerformanceExample() throws {
@@ -33,4 +37,41 @@ class VideoFeedsTests: XCTestCase {
         }
     }
 
+}
+
+extension XCTestCase {
+
+  func wait(for duration: TimeInterval) {
+    let waitExpectation = expectation(description: "Waiting")
+
+    let when = DispatchTime.now() + duration
+    DispatchQueue.main.asyncAfter(deadline: when) {
+      waitExpectation.fulfill()
+    }
+
+    // We use a buffer here to avoid flakiness with Timer on CI
+    waitForExpectations(timeout: duration + 0.5)
+  }
+}
+
+
+class MockApiService: APIServiceProtocol {
+
+    var isFetchVideoCalled = false
+    
+    var completeFeaturedVideos: [FeedItem] = [FeedItem]()
+    var completeClosure: ((Result<[FeedItem], Error>) -> Void)!
+    
+    func fetchFeatured(completion: @escaping (Result<[FeedItem], Error>) -> Void) {
+        isFetchVideoCalled = true
+        completeClosure = completion
+    }
+    
+    func fetchSuccess() {
+        completeClosure(.success(completeFeaturedVideos))
+    }
+    
+    func fetchFail(error: Error) {
+        completeClosure(.failure(error))
+    }
 }
